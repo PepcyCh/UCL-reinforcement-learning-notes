@@ -1,4 +1,8 @@
-#include <bits/stdc++.h>
+#include <iostream>
+#include <chrono>
+#include <random>
+#include <unordered_set>
+#include <unordered_map>
 
 #define LOG(expr) std::cout << expr << std::endl;
 
@@ -197,7 +201,6 @@ class CliffWalkingState {
             }
         }
         int ind = rnd_gen() % actions.size();
-        assert(actions.size() > 0);
         return actions[ind];
     }
 
