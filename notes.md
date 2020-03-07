@@ -332,3 +332,288 @@ contraction mapping theorem
 
 * skipped...
 
+## Lect 4 Model-Free Prediction
+
+Monte-Carlo Reinforcement Learning
+
+* MC methods learn directly from episodes of experience
+* MC is model-free: no knowledge of MDP transitions / rewards
+* MC learns from complete episodes: no bootstrapping
+* MC uses the simplest possible idea: value = mean return
+* Caveat: can only apply MC to episodic MDPs
+  * All episodes must terminate
+
+Monte-Carlo  Policy Evaluation (every/firts-visit)
+
+* Every/the first time-step $t$ that state $s$ is visited in an episode
+* Increment counter $N(s) \leftarrow N(s) + 1$
+* Increment total return $S(s) \leftarrow S(s) + G_t$
+* Value is estimated by mean return $V(s) = S(s) / N(s)$
+* By law of large number, $V(s) \to v_\pi(s)$ as $N(s) \to \infty$
+
+Incremental Mean
+
+* $\mu_k = \mu_{k - 1} + (x_k - \mu_{k - 1}) / k$
+
+Incremental MC Updates
+
+* $N(s) \leftarrow N(s) + 1, V(s) \leftarrow V(s) + (G_t - V(s)) / N(s)$
+* In non-stationary problems, it can be useful to track a running mean, i.e. forget old episodes: $V(s) \leftarrow V(s) + \alpha(G_t - V(s))$
+
+Temporal-Difference Learning
+
+* TD methods learn directly from episodes of experience
+* TD is model-free: no knowledge of MDP transitions / rewards
+* TD learns from incomplete episodes, by bootstrapping 
+* TD updates a guess towards a guess
+
+Simplest Temporal-Difference Learning Algorithm: TD(0)
+
+* Use $R_{t + 1} + \gamma V(S_{t + 1})$ instead of $G_t$ in MC methods
+* $R_{t + 1} + \gamma V(S_{t + 1})$ is called the TD target
+* $\delta_{t + 1} = R_{t + 1} + \gamma V(S_{t + 1}) - V(S_t)$ is called the TD error
+
+Bias / Variance
+
+* Return $G_t = R_{t + 1} + \gamma R_{t + 2} + \cdots + \gamma^{T - t - 1} R_{T}$ is unbiased
+* True TD target $R_{t + 1} + \gamma v_\pi(S_{t + 1})$ is unbiased
+* TD target $R_{t + 1} + \gamma V(S_{t + 1})$ is biased
+* TD target is much lower variance than the return
+
+Batch MC and TD
+
+* sample $K$ episodes without updates
+
+Certainty Equivalence
+
+* MC converges to solution with minimum mean-squared error
+  * best fit to the observed returns
+  * $\sum_{k = 1}^{K} \sum_{t = 1}^{T_k} (G_t^k - V(S_t^k))^2$
+* TD(0) converges to solution of max likelihood Markov model
+  * solution to the MDP $\lang \mathcal{S}, \mathcal{A}, \hat{\mathcal{P}}, \hat{\mathcal{R}}, \gamma \rang$ that best fits the data
+  * $\hat{\mathcal{P}}_{ss’}^a = 1/N(s, a) \sum_{k = 1}^{K} \sum_{t = 1}^{T_k} [s_t^k, a_t^k, s_{t + 1}^k = s, a, s']$
+  * $\hat{\mathcal{R}}_s^a = 1 / N(s, a) \sum_{k = 1}^{K} \sum_{t = 1}^{T_k} [s_t^k, a_t^k = s, a]r_t^k$
+
+Advantages & Disadvantages of MC vs. TD
+
+* TD can learn before knowing the final outcome
+  * TD can learn online after every step
+  * MC must wait until end of episode before return is known
+* TD can learn without the final outcome
+  * TD can learn from incomplete sequences
+  * MC can only learn from complete sequences
+  * TD works in continuing (non-terminating) environments
+  * MC only works for episodic (terminating) environments
+* MC has high variance, zero bias
+  * Good convergence properties
+  * (even with function approximation)
+  * Not very sensitive to initial value
+  * Very simple to understand and use
+* TD has low variance, some bias
+  * Usually more efficient than MC
+  * TD(0) converges to $v_\pi(s)$
+  * (but not always with function approximation)
+  * More sensitive to initial value
+* TD exploits Markov property
+  * Usually more efficient in Markov environments
+* MC does not exploit Markov property
+  * Usually more effective in non-Markov environments
+
+Bootstrapping and Sampling
+
+* Bootstrapping: update involves an estimate
+  * DP, TD bootstrap
+  * MC does not bootstrap
+* Sampling: update samples an expectation
+  * MC, TD samples
+  * DP does not sample
+
+n-step Prediction
+
+* $n = 1$: TD(0)
+* $n = \infty$: MC
+
+n-step Return
+
+* $G_t^{(n)} = R_{t + 1} + \gamma R_{t + 2} + \cdots + \gamma^{n - 1}R_{t + n} + \gamma^n V(S_{t + n})$
+* n-step TD: $V(S_t) \leftarrow V(S_t) + \alpha(G_t^{(n)} - V(S_t))$
+
+Averaging n-step Returns
+
+Forward-view TD($\lambda$)
+
+* $\lambda$-return: $G_t^\lambda = (1 - \lambda)\sum_{n = 1}^{\infty}\lambda^{n - 1}G_t^{(n)}$
+* Forward-view TD($\lambda$): $V(S_t) \leftarrow V(S_t) + \alpha(G_t^\lambda - V(S_t))$
+* Can only be computed from complete episodes
+
+Eligibility Traces (资格迹)
+
+* $E_0(s) = 0$
+* $E_t(s) = \gamma \lambda E_{t - 1}(s) + [S_t = s]$
+
+Backward-view TD($\lambda$)
+
+* Keep an eligibility trace for each state
+* Update value $V(s)$ for every state $s$
+* $\delta_t = R_{t + 1} + \gamma V(S_{t + 1}) - V(S_t)$
+* $V(s) \leftarrow V(s) + \alpha \delta_t E_t(s)$
+
+TD($\lambda$) and TD(0)
+
+* $E_t(s) = [S_t = s]$
+* $V(s) \leftarrow V(s) + \alpha \delta_t [S_t = s]$, which is just TD(0)
+
+TD($\lambda$) and MC
+
+* The sum of offline updates is identical for forward-view and backward-view TD($\lambda$)
+* $\sum_{t = 1}^{T} \alpha \delta_t E_t(s) = \sum_{t = 1}^{T} \alpha (G_t^\lambda - V(S_t))[S_t = s]$
+* Over the course of an episode, total update for TD(1) is the same as total update for MC
+
+MC and TD(1)
+
+* TD(1) is roughly equivalent to every-visit MC
+* Error is accumelated online, step-by-step
+* If value function is only updated offline at end of episode
+* Then total update is exactly the same as MC
+
+Telescoping in TD($\lambda$)
+
+* $G_t^\lambda = V(S_t) + \sum_{i = 0}^{\infty} (\lambda \gamma)^i \delta_{t + i}$
+
+Offline Equivalence of Forward and Backward TD
+
+* Offline updates are accumelated within episode
+* but applied in batch at the end of episodes
+
+Online Equivalence of Forward and Backward TD
+
+* applied online at each step within episode
+* Forward and backward-view TD($\lambda$) are slightly different
+* Exact online TD($\lambda$) achieves perfect equivalence
+* By using a slightly different form of eligiblity trace
+
+## Lect 5 Model-Free Control
+
+Model-Free Control can solves:
+
+* MDP model is unknown, but exprience can be sampled
+* MDP model is known, but is too big to use, except by samples
+
+Generalized Policy Iteration with MC Evaluation
+
+* $V = v_\pi$ ?
+* Greedy policy improvement ?
+
+Generalized Policy Iteration with Action-Value Function
+
+* Greedy policy improvement over $Q(s, a)$ is model-free
+* $Q = q_\pi$ !
+* Greedy policy improvement ? (we are sampling, max may not be the best)
+
+$\varepsilon$-Greedy Exploration
+
+* Simplest idea for ensuring continual exploration
+* All $m$ actions are tried with non-zero probability
+* With probability $1 - \varepsilon$ choose the greedy action
+* With probability $\varepsilon$ choose an action at random (include the greedy one)
+
+MC Policy Iteration
+
+* MC policy evaluation, $Q = q_\pi$
+* $\varepsilon$-greedy policy improvement
+
+MC Control
+
+* For every episode
+* MC policy evaluation $Q \approx q_\pi$
+* $\varepsilon$-greedy policy improvement
+
+GLIE
+
+* Greedy in the Limit with Infinite Exploration
+* All action-state pairs are explored infinitely many times
+* The policy converges on a greedy policy
+* $\varepsilon$-greedy is GLIE if $\varepsilon$ reduces to zero at $\varepsilon_k = 1 / k$
+
+GLIE MC Control
+
+* For each state $S_t$ and action $A_t$ in the episode
+* $N(S_t, A_t) \leftarrow N(S_t, A_t) + 1$
+* $Q(S_t, A_t) \leftarrow Q(S_t, A_t) + (G_t - Q(S_t, A_t)) / N(S_t, A_t)$
+* Do $\varepsilon$-greedy with $\varepsilon = 1/k$
+* GLIE MC control converges to the optimal action-value function
+
+On-Policy Control with Sarsa
+
+* Apply TD on Q: $Q(s, a) \leftarrow Q(s, a) + \alpha(R + \gamma Q(s’, a’) - Q(s, a))$
+* Every time-step
+* Sarsa, $Q \approx q_\pi$
+* $\varepsilon$-greedy policy improvement
+
+Convergence of Sarsa
+
+* GLIE sequence of policies $\pi_t(a \mid s)$
+* Robbins-Monro sequence of step-sizes $\alpha_t$:
+* $\sum_{t = 1}^{\infty} \alpha_t = \infty, \sum_{t = 1}^{\infty} \alpha_t^2 < \infty$
+
+n-step Sarsa
+
+* $q_t^{(n)} = R_{t + 1} + \gamma R_{t + 2} + \cdots + \gamma^{n - 1} R_{t + n} + \gamma^n Q(S_{t + n}, A_{t + n})$
+* $Q(S_t, A_t) \leftarrow Q(S_t, A_t) + \alpha (q_t^{(n)} - Q(S_t, A_t))$
+
+Forward-view Sarsa($\lambda$)
+
+* $q_t^\lambda = (1 - \lambda) \sum_{n = 1}^{\infty} \lambda^{n - 1} q_t^{(n)}$
+* $Q(S_t, A_t) \leftarrow Q(S_t, A_t) + \alpha (q_t^\lambda - Q(S_t, A_t))$
+
+Backward-view Sarsa($\lambda$)
+
+* Eligibility trace: $E_0(s, a) = 0; E_t(s, a) = \gamma \lambda E_{t - 1}(s, a) + [S_t = a, A_t = a]$
+* $\delta_t = R_{t + 1} + \gamma Q(S_{t + 1}, A_{t + 1}) - Q(S_t, A_t)$
+* $Q(s, a) \leftarrow Q(s, a) + \alpha \delta_t E_t(s, a)$
+
+Off-policy Learning
+
+* behavior policy $\mu(a \mid s)$
+* Learn from observing humans or other agents
+* Re-use expeirence generated from old policies
+* Learn about optimal policy while following exploratory policy
+* Learn about multiple policies while following one policy
+
+Importance Sampling for Off-policy MC
+
+* Use returns generated from $\mu$ to evaluate $\pi$
+* $G_t^{\pi / \mu} = \frac{\pi(A_t \mid  S_t) \cdots \pi(A_T \mid S_T)}{\mu(A_t \mid S_t) \cdots \mu(A_T \mid S_T)} G_t$
+* $V(S_t) \leftarrow V(S_t) + \alpha (G_t^{\pi / \mu} - V(S_t))$
+* Can dramatically increase variance
+
+Importance Sampling for Off-policy TD
+
+* $V(S_t) \leftarrow V(S_t) + \alpha(\frac{\pi(A_t \mid S_t)}{\mu(A_t \mid S_t)} (R_{t + 1} + \gamma V(S_{t + 1})) - V(S_t))$
+* Much lower variance than MC importance sampling
+* Policies only need to be similar over a single step
+
+Q-Learning
+
+* Off-policy learning of action-values
+* No importance sampling is required
+* $A_{t + 1} \sim \mu(\cdot \mid S_t)$, $A’ \sim \pi(\cdot \mid S_t)$
+* $Q(S_t, A_t) \leftarrow Q(S_t, A_t) + \alpha(R_{t + 1} + \gamma Q(S_{t + 1}, A’) - Q(S_t, A_t))$
+
+Off-policy Control with Q-Learning
+
+* Allow both behavior and target policies to improve
+* Target policy $\pi$ is greedy; Behavior policy $\mu$ is $\varepsilon$-greedy
+* Q-learning target can be simplified to $R_{t + 1} + \max_{a’} \gamma Q(S_{t + 1}, a')$
+* Q-learning control converges to the optimal action-value function
+
+Relationship between DP and TD
+
+|                  | Full Backup (DP)                                             | Sample Backup (TD)                                           |
+| ---------------- | ------------------------------------------------------------ | ------------------------------------------------------------ |
+| BEE for $v_\pi$  | Iterative Policy Evaluation $V(s) \leftarrow E[R + \gamma V(S') \mid s]$ | TD Learning $V(S) \overset{\alpha}{\leftarrow} R + \gamma V(S')$ |
+| BEE for $q_\pi$  | Q-Policy Iteration $Q(s, a) \leftarrow E[R + \gamma Q(S', A') \mid s, a]$ | Sarsa $Q(S, A) \overset{\alpha}{\leftarrow} R + \gamma Q(S’, A')$ |
+| BOE for $q_\ast$ | Q-Valur Iteration $Q(s, a) \leftarrow E[R + \gamma \max_{a’} Q(S’, a’) \mid s, a]$ | Q-Learning $Q(S, A) \overset{\alpha}{\leftarrow} R + \gamma \max_{a'} Q(S’, a')$ |
+
+* where $x \overset{\alpha}{\leftarrow} y$ means $x \overset{\alpha}{\leftarrow} x + \alpha(y - x)$
+
