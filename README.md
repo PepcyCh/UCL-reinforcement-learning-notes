@@ -23,3 +23,5 @@ Course site: [UCL Course on RL](http://www0.cs.ucl.ac.uk/staff/d.silver/web/Teac
 
 * Policy Iteration and Value Iteration - car rental problem
 * Sarsa - cliff walking problem
+* Sarsa(lambda) - cliff walking problem
+* Q-Learning - cliff walking problem

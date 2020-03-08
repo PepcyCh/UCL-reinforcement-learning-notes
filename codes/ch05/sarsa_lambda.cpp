@@ -19,7 +19,7 @@ double Lerp(double a, double b, double t) {
 }
 
 /*
- * Sarsa
+ * Sarsa(lambda)
  *
  * Routine
  *   Initialize action-value function
@@ -29,7 +29,10 @@ double Lerp(double a, double b, double t) {
  *     For each step
  *       Get R, S' from S, A
  *       Choose action A'
- *       Update Q(S, A)
+ *       Update E(S, A)
+ *       Calc delta
+ *       For each s, a
+ *         Update Q(s, a), E(s, a)
  *       S, A <- S', A'
  *
  * State should implement
@@ -49,9 +52,10 @@ double Lerp(double a, double b, double t) {
 template <typename TState, typename TAction,
           typename StateHash = std::hash<TState>,
           typename ActionHash = std::hash<TAction>>
-class Sarsa {
+class SarsaLambda {
   public:
-    Sarsa(double gamma = 0.9, double alpha = 0.5) : gamma(gamma), alpha(alpha) {
+    SarsaLambda(double gamma = 0.9, double alpha = 0.5, double lambda = 0.9) :
+            gamma(gamma), alpha(alpha), lambda(lambda) {
         all_states = State::GetAllStates();
         all_actions = State::GetAllActions();
     }
@@ -71,8 +75,15 @@ class Sarsa {
                 double reward = state.CalcReward(action);
                 State state_p = state.NextState(action);
                 Action action_p = state_p.NextAction(values[state_p], epsilon);
-                values[state][action] = Lerp(values[state][action],
-                        reward + gamma * values[state_p][action_p], alpha);
+                ++traces[state][action];
+                double delta = reward + gamma * values[state_p][action_p] -
+                    values[state][action];
+                for (const auto &s : all_states) {
+                    for (const auto &a : all_actions) {
+                        values[s][a] += alpha * delta * traces[s][a];
+                        traces[s][a] *= lambda;
+                    }
+                }
                 state = state_p;
                 action = action_p;
             }
@@ -94,6 +105,8 @@ class Sarsa {
     using Actions = std::unordered_set<Action, ActionHash>;
     using ActionValues = std::unordered_map<State,
           std::unordered_map<Action, double, ActionHash>, StateHash>;
+    using ElibilityTraces = std::unordered_map<State,
+          std::unordered_map<Action, double, ActionHash>, StateHash>;
 
     void Initialize() {
         for (const auto &state : all_states) {
@@ -113,10 +126,11 @@ class Sarsa {
         }
     }
 
-    double gamma, alpha;
+    double gamma, alpha, lambda;
     States all_states;
     Actions all_actions;
     ActionValues values;
+    ElibilityTraces traces;
 };
 
 const int kLenHorizontal = 12;
@@ -237,10 +251,11 @@ class CliffWalkingState {
     int x, y;
 };
 
-class CliffWalking : public Sarsa<CliffWalkingState, CliffWalkingState::Action,
-        HashFunc<CliffWalkingState>> {
+class CliffWalking : public SarsaLambda<CliffWalkingState,
+        CliffWalkingState::Action, HashFunc<CliffWalkingState>> {
   public:
-    CliffWalking(double gamma = 0.9, double alpha = 0.5) : Sarsa(gamma, alpha) {}
+    CliffWalking(double gamma = 0.9, double alpha = 0.5, double lambda = 0.9) :
+        SarsaLambda(gamma, alpha, lambda) {}
 
     void Display() const {
         for (int i = 0; i < kLenVertical; i++) {

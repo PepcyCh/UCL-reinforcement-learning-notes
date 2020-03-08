@@ -19,23 +19,24 @@ double Lerp(double a, double b, double t) {
 }
 
 /*
- * Sarsa
+ * Q-Learning
  *
  * Routine
  *   Initialize action-value function
  *   Do updates for each episode
  *     Get initial state S
- *     Choose action A
  *     For each step
+ *       Choose action A
  *       Get R, S' from S, A
- *       Choose action A'
+ *       Find a that Q(S', a) is maximum
  *       Update Q(S, A)
- *       S, A <- S', A'
+ *       S <- S'
  *
  * State should implement
  *   Hash() (or std::hash())
  *   CanDoAction(action)
  *   NextAction(values, epsilon)
+ *   MaxAction(values)
  *   NextState(action)
  *   CalcReward(action)
  *   static GetAllStates()
@@ -49,9 +50,9 @@ double Lerp(double a, double b, double t) {
 template <typename TState, typename TAction,
           typename StateHash = std::hash<TState>,
           typename ActionHash = std::hash<TAction>>
-class Sarsa {
+class QLearning {
   public:
-    Sarsa(double gamma = 0.9, double alpha = 0.5) : gamma(gamma), alpha(alpha) {
+    QLearning(double gamma = 0.9, double alpha = 0.5) : gamma(gamma), alpha(alpha) {
         all_states = State::GetAllStates();
         all_actions = State::GetAllActions();
     }
@@ -66,15 +67,14 @@ class Sarsa {
 
             double epsilon = 1.0 / (i + 1.0);
             State state = State::GetInitialState();
-            Action action = state.NextAction(values[state], epsilon);
             while (!state.IsTerminal()) {
+                Action action = state.NextAction(values[state], epsilon);
                 double reward = state.CalcReward(action);
                 State state_p = state.NextState(action);
-                Action action_p = state_p.NextAction(values[state_p], epsilon);
+                Action action_max = state_p.MaxAction(values[state]);
                 values[state][action] = Lerp(values[state][action],
-                        reward + gamma * values[state_p][action_p], alpha);
+                        reward + gamma * values[state_p][action_max], alpha);
                 state = state_p;
-                action = action_p;
             }
 
             auto end = std::chrono::high_resolution_clock::now();
@@ -177,27 +177,35 @@ class CliffWalkingState {
 
     Action NextAction(const Values &values, double epsilon) const {
         double rnd = rnd_uniform(rnd_gen);
-        std::vector<Action> actions;
-        Actions all_actions = GetAllActions();
         if (rnd < epsilon) { // random
+            Actions all_actions = GetAllActions();
+            std::vector<Action> actions;
             for (auto action : all_actions) {
                 if (CanDoAction(action)) {
                     actions.push_back(action);
                 }
             }
+            int ind = rnd_gen() % actions.size();
+            return actions[ind];
         } else { // greedy (random from maxima)
-            double max = std::numeric_limits<double>::lowest();
-            for (auto action : all_actions) {
-                double value = values.at(action);
-                if (CanDoAction(action) && value > max) {
-                    max = value;
-                }
+            return MaxAction(values);
+        }
+    }
+
+    Action MaxAction(const Values &values) const {
+        Actions all_actions = GetAllActions();
+        std::vector<Action> actions;
+        double max = std::numeric_limits<double>::lowest();
+        for (auto action : all_actions) {
+            double value = values.at(action);
+            if (CanDoAction(action) && value > max) {
+                max = value;
             }
-            for (auto action : all_actions) {
-                double value = values.at(action);
-                if (CanDoAction(action) && std::abs(value - max) < 1e-6) {
-                    actions.push_back(action);
-                }
+        }
+        for (auto action : all_actions) {
+            double value = values.at(action);
+            if (CanDoAction(action) && std::abs(value - max) < 1e-6) {
+                actions.push_back(action);
             }
         }
         int ind = rnd_gen() % actions.size();
@@ -237,10 +245,11 @@ class CliffWalkingState {
     int x, y;
 };
 
-class CliffWalking : public Sarsa<CliffWalkingState, CliffWalkingState::Action,
-        HashFunc<CliffWalkingState>> {
+class CliffWalking : public QLearning<CliffWalkingState,
+        CliffWalkingState::Action, HashFunc<CliffWalkingState>> {
   public:
-    CliffWalking(double gamma = 0.9, double alpha = 0.5) : Sarsa(gamma, alpha) {}
+    CliffWalking(double gamma = 0.9, double alpha = 0.5) :
+        QLearning(gamma, alpha) {}
 
     void Display() const {
         for (int i = 0; i < kLenVertical; i++) {
