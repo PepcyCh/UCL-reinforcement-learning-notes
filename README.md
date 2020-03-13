@@ -13,7 +13,7 @@ Course site: [UCL Course on RL](http://www0.cs.ucl.ac.uk/staff/d.silver/web/Teac
 * [x] Lecture 3: Planning by Dynamic Programming
 * [x] Lecture 4: Model-Free Prediction
 * [x] Lecture 5: Model-Free Control
-* [ ] Lecture 6: Value Function Approximation
+* [x] Lecture 6: Value Function Approximation
 * [ ] Lecture 7: Policy Gradient Methods
 * [ ] Lecture 8: Integrating Learning and Planning
 * [ ] Lecture 9: Exploration and Exploitation

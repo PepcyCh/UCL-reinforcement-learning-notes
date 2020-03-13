@@ -617,3 +617,122 @@ Relationship between DP and TD
 
 * where $x \overset{\alpha}{\leftarrow} y$ means $x \overset{\alpha}{\leftarrow} x + \alpha(y - x)$
 
+## Lect 6 Value Function Approximation
+
+Problems with large MDPs
+
+* There are too many states and/or actions to store in memory
+* It is too slow to learn the value of each state individually
+
+Solution for large MDPs
+
+* Estimate value function with function approximation
+* $\hat{v}(s, w) \approx v_\pi(s)$ or $\hat{q}(s, a, w) \approx q_\pi(s, a)$ ($w$ is a vector)
+* Generalize from seen states to unseen states
+* Update parameter $w$ using MC or TD learning
+
+Which Function Approximator
+
+* Differentiable: linear combinations of features, neural network
+* Require a training method that is suitable for non-stationary, non-iid data
+
+Value Function Approx. By Stochastic Gradiant Descent
+
+* Goal: minimize $J(w) = E_\pi [(v_\pi(S) - \hat{v}(S, w))^2]$
+* Gradient descent: $\Delta w = \alpha E_\pi [(v_\pi(S) - \hat{v}(S, w)) \nabla_w \hat{v}(S, w)]$
+* Stochastic gradient descent samples the gradient
+
+Linear Value Function Approximation
+
+* $\hat{v}(S, w) = x(S)^T w$
+* Stochastic gradient descent converges on the global optimum
+* $\Delta w = \alpha (v_\pi(S) - \hat{v}(S, w)) x(S)$
+
+Incremental Prediction Algorithm
+
+* In practive, we substitude a target for $v_\pi(S)$
+* MC: return $G_t$
+* TD(0): TD target $R_{t + 1} + \gamma \hat{v}(S_{t + 1}, w)$
+* TD($\lambda$): $\lambda$-return $G_t^\lambda$
+
+MC with Value Function Approx.
+
+* Return $G_t$ is unbiased
+* Can apply supervised learning to $(S_1, G_1), (S_2, G_2), \dots, (S_T, G_T)$
+* Converges to a local optimum. Even when using a non-linear value function approx.
+
+TD(0) with Value Function Approx.
+
+* TD target is biased
+* Can still apply supervised learning to $(S_1, R_2 + \gamma \hat{v}(S_2, w)), \dots, (S_{T - 1}, R_T)$
+* Linear TD(0) converges to global optimum
+
+TD($\lambda$) with Value Function Approx.
+
+* $\lambda$-return is biased
+* Can still apply supervised learning to $(S_1, G_1^\lambda), \dots, (S_{T - 1}, R_{T - 1}^\lambda)$
+* Forward-view linear TD($\lambda$): $\Delta w = \alpha(G_t^\lambda - \hat{v}(S_t, w)) x(S_t)$
+* Backward-view linear TD($\lambda$): $E_t = \gamma \lambda E_{t - 1} + x(S_t), \Delta w = \alpha \delta_t E_t$
+* Forward and backward are equivalent
+
+Control with Value Function Approx.
+
+* Approximate policy evaluation
+* $\varepsilon$-greedy policy improvement
+
+Action-Value Function Approx.
+
+Linear Action-Value Function Approx.
+
+Incremental Control Algorithm
+
+* Substitude a target for $q_\pi(S, A)$
+* MC: return $G_t$
+* TD(0): TD target $R_{t + 1} + \gamma \hat{q}(S_{t + 1}, A_{t + 1})$
+* Forward-view TD($\lambda$): action-value $\lambda$-return $q_t^\lambda$
+* Backward-view TD($\lambda$): $E_t = \gamma \lambda E_{t - 1} + \nabla_w \hat{q}(S_t, A_t, w), \Delta w = \alpha \delta_t E_t$
+
+Experience Replay in DQN
+
+* Take action $a_t$ according to $\varepsilon$-greedy policy
+* Store transition $(s_t, a_t, r_{t + 1}, s_{t + 1})$ in replay memory $\mathcal{D}$
+* Sample random minibatch of transitions $(s, a, r, s')$ from $\mathcal{D}$
+* Compute Q-learning targets with respect to old, fixed parameters $w^-$
+* Optimize MSE between Q-network and Q-learning targets $\mathcal{L_i}(w_i) = E_{s, a, r, s’ \sim \mathcal{D}}[(r + \gamma \max_{a'} Q(s', a’, w^-) - Q(s, a, w_i)^2]$
+* Using variant of stochastic gradient descent
+
+Linear Least Squares Prediction
+
+* We can solve the least squares solution directly
+
+* $$
+  \begin{align}
+  E_{\mathcal{D}}[\Delta w] &= 0 \\
+  \alpha \sum_{t = 1}^{T} x(s_t) (v_t^\pi - x(s_t)^T w) &= 0 \\
+  \sum_{t = 1}^{T} x(s_t) v_t^\pi &= \sum_{t = 1}^{T} x(s_t) x(s_t)^Tw \\
+  w &= \left( \sum_{t = 1}^T x(s_t)x(s_t)^T \right)^{-1} \sum_{t = 1}^T x(s_t) v_t^\pi
+  \end{align}
+  $$
+
+* For $n$ features, direct solution is $O(n^3)$
+
+* Incremental solution time is $O(n^2)$ using Shermann-Morrison
+
+* LSMC: $v_t^\pi \approx G^t$
+
+* LSTD: $v_t^\pi \approx R_{t + 1} + \gamma \hat{v}(S_{t + 1}, w)$
+
+* LSTD($\lambda$): $v_t^\pi \approx G_t^\lambda$
+
+LS Policy Iteration
+
+* Policy evaluation by LS Q-learning
+* Greedy policy improvement
+
+LS Action-Value Function Approx.
+
+LS Control
+
+* The experience is generated from any policies
+* So to evaluate $q_\pi(S, A)$ we must learn off-policy
+
